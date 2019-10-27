@@ -41,6 +41,13 @@ run-or-raise with group search t."
 (add-hook *focus-window-hook* 'focus-window-transparency)
 
 ;;; Commands
+;; Monitors
+(defcommand monitor-left () ()
+  (run-shell-command "type setup && setup monitor left")
+  (refresh-heads))
+(defcommand monitor-rigth () ()
+  (run-shell-command "type setup && setup monitor right")
+  (refresh-heads))
 ;; Transparency
 (defcommand transparency-window (opacity)
   ((:number "Enter transparency: "))
@@ -254,11 +261,8 @@ run-or-raise with group search t."
 ;; [ Stumpwm Tray
 ;; dependency
 ;; * (ql:quickload "xembed")
-(load-module "stumptray")
-(defcommand toggle-modeline () ()
-  (toggle-mode-line (current-screen)
-                    (current-head))
-  (stumptray::stumptray))
+;; (load-module "stumptray")
+;; (stumptray::stumptray)
 ;; ]
 ;; [ Background
 ;; require `feh`
@@ -287,3 +291,6 @@ run-or-raise with group search t."
 (run-shell-command "type emacs && emacs --daemon")
 (run-shell-command "type setup && setup monitor left")
 (run-shell-command "type compton && compton")
+(refresh-heads)
+(toggle-mode-line (current-screen)
+                  (current-head))
