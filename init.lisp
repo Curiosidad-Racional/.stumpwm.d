@@ -232,8 +232,8 @@ run-or-raise with group search t."
       *mode-line-timeout* 9.0
       *timeout-wait* 30
       *window-format* "%m%n%s%10c"
-      *time-modeline-string* "%a %b %e %k:%M"
-      *screen-mode-line-format* "%h:%g^4>^]%w^>^2%d^]   ")
+      *time-modeline-string* "%a %b %e %H:%M"
+      *screen-mode-line-format* "%h:%g^4>^]%w^>^2%d^]        %T")
 
 ;; (toggle-mode-line (current-screen)
 ;;                   (current-head))
@@ -261,8 +261,7 @@ run-or-raise with group search t."
 ;; [ Stumpwm Tray
 ;; dependency
 ;; * (ql:quickload "xembed")
-;; (load-module "stumptray")
-;; (stumptray::stumptray)
+(load-module "stumptray")
 ;; ]
 ;; [ Background
 ;; require `feh`
@@ -283,14 +282,20 @@ run-or-raise with group search t."
 ;; Outer gaps add more padding to the outermost borders of a window (touching
 ;; the screen border)
       swm-gaps:*outer-gaps-size* 0)
-(swm-gaps::toggle-gaps)
 ;; ]
 
 
 ;;; Programs
 (run-shell-command "type emacs && emacs --daemon")
+(run-shell-command "xscreensaver -no-splash")
 (run-shell-command "type setup && setup monitor left")
 (run-shell-command "type compton && compton")
-(refresh-heads)
 (toggle-mode-line (current-screen)
                   (current-head))
+(refresh-heads)
+;; [ Stumpwm Tray
+(stumptray::stumptray)
+;; ]
+;; [ Gaps between windows
+(swm-gaps::toggle-gaps)
+;; ]
