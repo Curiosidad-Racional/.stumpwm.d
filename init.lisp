@@ -78,7 +78,7 @@ run-or-raise with group search t."
 
 ;; exec
 (defcommand ec () ()
-  (run-or-raise-prefer-group "emacsclient -n -c" "Emacs"))
+  (run-or-raise-prefer-group "emacsclient -c -n" "Emacs"))
 (defcommand firefox () ()
   (run-or-raise-prefer-group "firefox" "Firefox"))
 (defcommand google-chrome () ()
@@ -87,6 +87,8 @@ run-or-raise with group search t."
   (run-or-raise-prefer-group "xterm" "XTerm"))
 (defcommand workbench () ()
   (run-or-raise-prefer-group "mysql-workbench" "Mysql-workbench"))
+(defcommand wireshark () ()
+  (run-or-raise-prefer-group "wireshark" "Wireshark"))
 
 (defcommand resize-width (width-inc)
   ((:number "Enter width increment: "))
@@ -117,10 +119,17 @@ run-or-raise with group search t."
 ;; (load (merge-pathnames "bindings.lisp" *load-truename*))
 
 (define-key *root-map* (kbd "e") "ec")
+(define-key *root-map* (kbd "E") "exec emacsclient -c -n")
 (define-key *root-map* (kbd "f") "firefox")
+(define-key *root-map* (kbd "F") "exec firefox")
 (define-key *root-map* (kbd "c") "google-chrome")
+(define-key *root-map* (kbd "C") "exec google-chrome")
 (define-key *root-map* (kbd "t") "xterm")
+(define-key *root-map* (kbd "T") "exec xterm")
 (define-key *root-map* (kbd "q") "workbench")
+(define-key *root-map* (kbd "Q") "exec workbench")
+(define-key *root-map* (kbd "w") "wireshark")
+(define-key *root-map* (kbd "W") "exec wireshark")
 
 (define-key *top-map* (kbd "s-l") "xscreensaver-command -lock")
 (define-key *top-map* (kbd "s-x") "colon")
@@ -166,13 +175,15 @@ run-or-raise with group search t."
 
 (dotimes (i 10)
   (define-key *group-root-map* (kbd (write-to-string i)) nil)
-  (define-key *top-map* (kbd (format nil "s-~a" i)) (format nil "select-window-by-number ~a" i)))
+  (define-key *top-map* (kbd (format nil "s-F~a" (if (= i 0) 10 i)))
+    (format nil "select-window-by-number ~a" i)))
 
 (define-key *top-map* (kbd "s-C") "gnew")
 (define-key *top-map* (kbd "s-K") "gkill")
 (dotimes (i 12)
-  (define-key *root-map* (kbd (format nil "F~a" (1+ i))) nil)
-  (define-key *top-map* (kbd (format nil "s-F~a" (1+ i))) (format nil "gselect ~a" (1+ i))))
+  (define-key *root-map* (kbd (format nil "F~a" (1+ i))) nil))
+(dotimes (i 9)
+  (define-key *top-map* (kbd (format nil "s-~a" (1+ i))) (format nil "gselect ~a" (1+ i))))
 
 (define-key *top-map* (kbd "s-m") "mark")
 
@@ -215,9 +226,11 @@ run-or-raise with group search t."
 (defparameter *transparency-focus-default* 0.8)
 (defparameter *transparency-unfocus-default* 0.65)
 (defparameter *transparency-focus* '(("Google-chrome" . 0.85)
-                                     ("Firefox" . 0.85)))
+                                     ("Firefox" . 0.85)
+                                     ("Totem" . 1.0)))
 (defparameter *transparency-unfocus* '(("Google-chrome" . 0.75)
-                                       ("Firefox" . 0.75)))
+                                       ("Firefox" . 0.75)
+                                       ("Totem" . 1.0)))
 (set-focus-color "cyan")
 
 (setf *maxsize-border-width* 3
@@ -233,7 +246,7 @@ run-or-raise with group search t."
       *timeout-wait* 30
       *window-format* "%m%n%s%10c"
       *time-modeline-string* "%a %b %e %H:%M"
-      *screen-mode-line-format* "%h:%g^4>^]%w^>^2%d^]        %T")
+      *screen-mode-line-format* "%h:%g^4>^]%w^>^2%d^]    %T")
 
 ;; (toggle-mode-line (current-screen)
 ;;                   (current-head))
@@ -287,8 +300,8 @@ run-or-raise with group search t."
 
 ;;; Programs
 (run-shell-command "type emacs && emacs --daemon")
-(run-shell-command "xscreensaver -no-splash")
-(run-shell-command "type setup && setup monitor left")
+(run-shell-command "type xscreensaver && xscreensaver -no-splash")
+(run-shell-command "type setup && setup monitor left" t)
 (run-shell-command "type compton && compton")
 (toggle-mode-line (current-screen)
                   (current-head))
