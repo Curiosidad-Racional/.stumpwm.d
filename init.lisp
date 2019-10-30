@@ -90,6 +90,7 @@ run-or-raise with group search t."
 (defcommand wireshark () ()
   (run-or-raise-prefer-group "wireshark" "Wireshark"))
 
+;; frames
 (defcommand resize-width (width-inc)
   ((:number "Enter width increment: "))
   (resize width-inc 0))
@@ -101,6 +102,20 @@ run-or-raise with group search t."
 (defcommand xscreensaver-command (arg)
   ((:string "Enter argument: "))
   (run-shell-command (concatenate 'string "xscreensaver-command " arg)))
+
+(defcommand layout-3 () ()
+  (let ((g (current-group (current-screen))))
+    (split-frame-in-dir g :row 0.75)
+    (split-frame-in-dir g :column 0.15))
+  ;; (move-focus-and-or-window :right)
+  ;; (let* ((g (current-group (current-screen)))
+  ;;        (f (tile-group-current-frame g)))
+  ;;   (resize-frame g f (round (* (frame-height f) 1.5)) :height)
+  ;;   (resize-frame g f (round (* (frame-width f) 1.7)) :width))
+  )
+
+(defcommand hide () ()
+  (hide-window (current-window)))
 
 (defcommand menu () ()
   (labels ((pick (options)
@@ -133,7 +148,7 @@ run-or-raise with group search t."
 
 (define-key *top-map* (kbd "s-l") "xscreensaver-command -lock")
 (define-key *top-map* (kbd "s-x") "colon")
-(define-key *top-map* (kbd "s-.") "eval")
+(define-key *top-map* (kbd "s-:") "eval")
 (define-key *top-map* (kbd "s-!") "exec")
 (define-key *top-map* (kbd "s-a") "toggle-modeline")
 (define-key *top-map* (kbd "C-s-g") "grouplist")
@@ -155,6 +170,7 @@ run-or-raise with group search t."
 (define-key *top-map* (kbd "s-+") "balance-frames")
 (define-key *top-map* (kbd "s--") "only")
 (define-key *top-map* (kbd "s-w") "windowlist")
+(define-key *top-map* (kbd "s-z") "hide")
 (define-key *top-map* (kbd "Menu") "menu")
 
 (define-key *top-map* (kbd "s-Up") "move-focus up")
@@ -173,19 +189,31 @@ run-or-raise with group search t."
 (define-key *top-map* (kbd "s-W") "resize-width")
 (define-key *top-map* (kbd "s-H") "resize-height")
 
+(define-key *top-map* (kbd "s-m") "mark")
+(define-key *top-map* (kbd "s-C") "gnew")
+(define-key *top-map* (kbd "s-K") "gkill")
+
+(define-key *root-map* (kbd "C-SPC") nil)
+(define-key *root-map* (kbd "C-a") nil)
+(define-key *root-map* (kbd "C-b") nil)
+(define-key *root-map* (kbd "C-c") nil)
+(define-key *root-map* (kbd "C-e") nil)
+(define-key *root-map* (kbd "C-w") nil)
+(define-key *root-map* (kbd "C-k") nil)
+(define-key *root-map* (kbd "C-m") nil)
+(define-key *root-map* (kbd "C-n") nil)
+(define-key *root-map* (kbd "C-p") nil)
+
 (dotimes (i 10)
   (define-key *group-root-map* (kbd (write-to-string i)) nil)
   (define-key *top-map* (kbd (format nil "s-F~a" (if (= i 0) 10 i)))
     (format nil "select-window-by-number ~a" i)))
 
-(define-key *top-map* (kbd "s-C") "gnew")
-(define-key *top-map* (kbd "s-K") "gkill")
 (dotimes (i 12)
   (define-key *root-map* (kbd (format nil "F~a" (1+ i))) nil))
 (dotimes (i 9)
   (define-key *top-map* (kbd (format nil "s-~a" (1+ i))) (format nil "gselect ~a" (1+ i))))
 
-(define-key *top-map* (kbd "s-m") "mark")
 
 ;;; Remaps
 ;; (define-remapped-keys
@@ -259,6 +287,10 @@ run-or-raise with group search t."
 
 ;;; Modules
 (set-module-dir "~/.stumpwm.d/modules")
+;; https://www.oreilly.com/library/view/x-window-system/9780937175149/Chapter05.html
+;; (set-font "-misc-fixed-medium-r-normal--10-100-75-75-c-60-iso8859-1") ;; 6x10 small
+;; (set-font "-misc-fixed-medium-r-normal--13-120-75-75-c-70-iso8859-1") ;; 7x13
+;; (set-font "-misc-fixed-medium-r-normal--14-130-75-75-c-70-iso8859-1") ;; 7x14
 ;; [ True Type fonts
 ;; dependency
 ;; * (ql:quickload "clx-truetype")
@@ -268,8 +300,10 @@ run-or-raise with group search t."
 ;; list system fonts: `fc-list`
 ;; update system fonts: `fc-cache -f` (force) or `fc-cache -r` (really force, clean and force)
 (load-module "ttf-fonts")
-(set-font (make-instance 'xft:font :family "Iosevka Term" :subfamily "Regular" :size 10))
-;; (set-font "-xos4-terminus-medium-r-normal--9-140-72-72-c-80-iso8859-15")
+(handler-case
+    (set-font (make-instance 'xft:font :family "Iosevka Term" :subfamily "Regular" :size 10))
+  (error (c)
+         (set-font "-misc-fixed-medium-r-normal--13-120-75-75-c-70-iso8859-1")))
 ;; ]
 ;; [ Stumpwm Tray
 ;; dependency
