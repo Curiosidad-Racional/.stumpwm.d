@@ -150,7 +150,7 @@ run-or-raise with group search t."
 (define-key *top-map* (kbd "s-x") "colon")
 (define-key *top-map* (kbd "s-:") "eval")
 (define-key *top-map* (kbd "s-!") "exec")
-(define-key *top-map* (kbd "s-a") "toggle-modeline")
+(define-key *top-map* (kbd "s-a") "mode-line")
 (define-key *top-map* (kbd "C-s-g") "grouplist")
 (define-key *top-map* (kbd "s-n") "next-in-frame")
 (define-key *top-map* (kbd "s-N") "next") ;; group
@@ -165,7 +165,8 @@ run-or-raise with group search t."
 (define-key *top-map* (kbd "s-s") "fselect")
 (define-key *top-map* (kbd "s-h") "hsplit")
 
-(define-key *top-map* (kbd "s-f") "fullscreen")
+(define-key *top-map* (kbd "s-f") "fullscreen-gaps")
+(define-key *top-map* (kbd "s-F") "fullscreen")
 (define-key *top-map* (kbd "s-c") "fclear")
 (define-key *top-map* (kbd "s-+") "balance-frames")
 (define-key *top-map* (kbd "s--") "only")
@@ -214,6 +215,15 @@ run-or-raise with group search t."
 (dotimes (i 9)
   (define-key *top-map* (kbd (format nil "s-~a" (1+ i))) (format nil "gselect ~a" (1+ i))))
 
+(defparameter *toggle-map*
+  (let ((m (make-sparse-keymap)))
+    (define-key m (kbd "g") "toggle-gaps")
+    (define-key m (kbd "t") "toggle-always-on-top")
+    (define-key m (kbd "s") "toggle-always-show")
+    (define-key m (kbd "m") "mode-line")
+    (define-key m (kbd "k") "which-key-mode")
+    m))
+(define-key *top-map* (kbd "s-t") *toggle-map*)
 
 ;;; Remaps
 ;; (define-remapped-keys
@@ -251,13 +261,15 @@ run-or-raise with group search t."
 
 ;;; Options
 (defparameter *transparency-p* t)
-(defparameter *transparency-focus-default* 0.8)
-(defparameter *transparency-unfocus-default* 0.65)
-(defparameter *transparency-focus* '(("Google-chrome" . 0.85)
-                                     ("Firefox" . 0.85)
+(defparameter *transparency-focus-default* 0.85)
+(defparameter *transparency-unfocus-default* 0.75)
+(defparameter *transparency-focus* '(("Google-chrome" . 0.9)
+                                     ("Firefox" . 0.9)
+                                     ("Mysql-workbench-bin" . 0.9)
                                      ("Totem" . 1.0)))
-(defparameter *transparency-unfocus* '(("Google-chrome" . 0.75)
-                                       ("Firefox" . 0.75)
+(defparameter *transparency-unfocus* '(("Google-chrome" . 0.8)
+                                       ("Firefox" . 0.8)
+                                       ("Mysql-workbench-bin" . 0.8)
                                        ("Totem" . 1.0)))
 (set-focus-color "cyan")
 
@@ -329,11 +341,15 @@ run-or-raise with group search t."
 ;; Outer gaps add more padding to the outermost borders of a window (touching
 ;; the screen border)
       swm-gaps:*outer-gaps-size* 0)
+(defcommand fullscreen-gaps () ()
+  (swm-gaps::toggle-gaps)
+  (fullscreen))
 ;; ]
 
 
 ;;; Programs
 (run-shell-command "type emacs && emacs --daemon")
+(run-shell-command "type conky && conky -d")
 (run-shell-command "type xscreensaver && xscreensaver -no-splash")
 (run-shell-command "type setup && setup monitor left" t)
 (run-shell-command "type compton && compton")
