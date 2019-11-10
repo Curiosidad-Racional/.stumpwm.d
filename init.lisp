@@ -6,6 +6,22 @@
           *transparency-unfocus*
           *transparency-unfocus-default*))
 
+(setf *maxsize-border-width* 3
+      *transient-border-width* 3
+      *normal-border-width* 3
+      *window-border-style* :tight
+      *default-group-name* "Def"  ;; ignored
+      *input-window-gravity* :center
+      *message-window-input-gravity* :center
+      *message-window-gravity* :center
+      *mouse-focus-policy* :click
+      *mode-line-timeout* 9.0
+      *timeout-wait* 30
+      *window-format* "%m%n%s%10c"
+      *time-modeline-string* "%a %b %e %H:%M"
+      *screen-mode-line-format* "%h:%g^4>^]%w^>^2%d^]    %T")
+;;(restart-soft)
+
 (set-prefix-key (kbd "s-SPC"))
 ;;; Functions
 (defun run-or-raise-prefer-group (cmd win-cls)
@@ -76,6 +92,11 @@ run-or-raise with group search t."
     (dolist (window (group-windows group))
       (set-window-transparency window 1))))
 
+(defcommand transparency-toggle () ()
+  (if *transparency-p*
+      (transparency-disable)
+    (transparency-enable)))
+
 ;; exec
 (defcommand ec () ()
   (run-or-raise-prefer-group "emacsclient -c -n" "Emacs"))
@@ -132,20 +153,6 @@ run-or-raise with group search t."
 
 ;;; Keys
 ;; (load (merge-pathnames "bindings.lisp" *load-truename*))
-
-(define-key *root-map* (kbd "e") "ec")
-(define-key *root-map* (kbd "E") "exec emacsclient -c -n")
-(define-key *root-map* (kbd "f") "firefox")
-(define-key *root-map* (kbd "F") "exec firefox")
-(define-key *root-map* (kbd "c") "google-chrome")
-(define-key *root-map* (kbd "C") "exec google-chrome")
-(define-key *root-map* (kbd "t") "xterm")
-(define-key *root-map* (kbd "T") "exec xterm")
-(define-key *root-map* (kbd "q") "workbench")
-(define-key *root-map* (kbd "Q") "exec workbench")
-(define-key *root-map* (kbd "w") "wireshark")
-(define-key *root-map* (kbd "W") "exec wireshark")
-
 (define-key *top-map* (kbd "s-l") "xscreensaver-command -lock")
 (define-key *top-map* (kbd "s-x") "colon")
 (define-key *top-map* (kbd "s-:") "eval")
@@ -194,6 +201,8 @@ run-or-raise with group search t."
 (define-key *top-map* (kbd "s-C") "gnew")
 (define-key *top-map* (kbd "s-K") "gkill")
 
+(define-key *top-map* (kbd "s-r") "refresh-heads")
+
 (define-key *root-map* (kbd "C-SPC") nil)
 (define-key *root-map* (kbd "C-a") nil)
 (define-key *root-map* (kbd "C-b") nil)
@@ -204,6 +213,8 @@ run-or-raise with group search t."
 (define-key *root-map* (kbd "C-m") nil)
 (define-key *root-map* (kbd "C-n") nil)
 (define-key *root-map* (kbd "C-p") nil)
+(define-key *root-map* (kbd "e") nil)
+(define-key *root-map* (kbd "c") nil)
 
 (dotimes (i 10)
   (define-key *group-root-map* (kbd (write-to-string i)) nil)
@@ -218,12 +229,30 @@ run-or-raise with group search t."
 (defparameter *toggle-map*
   (let ((m (make-sparse-keymap)))
     (define-key m (kbd "g") "toggle-gaps")
-    (define-key m (kbd "t") "toggle-always-on-top")
+    (define-key m (kbd "f") "toggle-always-on-top")
     (define-key m (kbd "s") "toggle-always-show")
     (define-key m (kbd "m") "mode-line")
     (define-key m (kbd "k") "which-key-mode")
+    (define-key m (kbd "t") "transparency-toggle")
     m))
 (define-key *top-map* (kbd "s-t") *toggle-map*)
+
+(defparameter *app-map*
+  (let ((m (make-sparse-keymap)))
+    (define-key m (kbd "e") "ec")
+    (define-key m (kbd "E") "exec emacsclient -c -n")
+    (define-key m (kbd "f") "firefox")
+    (define-key m (kbd "F") "exec firefox")
+    (define-key m (kbd "c") "google-chrome")
+    (define-key m (kbd "C") "exec google-chrome")
+    (define-key m (kbd "t") "xterm")
+    (define-key m (kbd "T") "exec xterm")
+    (define-key m (kbd "q") "workbench")
+    (define-key m (kbd "Q") "exec workbench")
+    (define-key m (kbd "w") "wireshark")
+    (define-key m (kbd "W") "exec wireshark")
+    m))
+(define-key *top-map* (kbd "s-q") *app-map*)
 
 ;;; Remaps
 ;; (define-remapped-keys
@@ -252,12 +281,34 @@ run-or-raise with group search t."
 
 
 ;;; Menu
-(defparameter *app-menu* '(("Google Chrome" "google-chrome")
-                           ("Mozilla Firefox" "firefox")
-                           ("Emacs Client" "emacsclient -c -n")
-                           ("XTerm" "xterm")
-                           ("File Manager" "nautilus")
-                           ("MySQL Workbench" "mysql-workbench")))
+(defparameter *app-menu*
+  '(("Aplications"
+     ("Google Chrome" "google-chrome")
+     ("Mozilla Firefox" "firefox")
+     ("Emacs Client" "emacsclient -c -n")
+     ("XTerm" "xterm")
+     ("File Manager" "nautilus")
+     ("MySQL Workbench" "mysql-workbench")
+     ("NetworkManager" "nm-applet")
+     ("System Monitor" "gnome-system-monitor")
+     ("Audacity" "audacity")
+     ("PulseAudio Volume Control" "pavucontrol")
+     ("Gimp" "gimp")
+     ("Simple Scan" "simple-scan")
+     ("Boot usb creator" "usb-creator-gtk")
+     ("KeePassXC" "keepassxc"))
+    ("Screen"
+     ("Next Background" "fbrdbg")
+     ("Blank Screen" "xset s activate")
+     ("Standby On" "xset +dpms s on")
+     ("Standby Off" "xset +dpms s off")
+     ("Configuration" "arandr")
+     ("Detect Left" "setup monitor left -w -k")
+     ("Detect Right" "setup monitor right -w -k")
+     ("Enable screensaver" "/usr/bin/xscreensaver -no-splash")
+     ("Disable screensaver" "/usr/bin/xscreensaver-command -exit")
+     ("Lock screen" "/usr/bin/xscreensaver-command -lock")
+     ("Configure screensaver" "/usr/bin/xscreensaver-command -prefs"))))
 
 ;;; Options
 (defparameter *transparency-p* t)
@@ -272,21 +323,6 @@ run-or-raise with group search t."
                                        ("Mysql-workbench-bin" . 0.8)
                                        ("Totem" . 1.0)))
 (set-focus-color "cyan")
-
-(setf *maxsize-border-width* 3
-      *transient-border-width* 3
-      *normal-border-width* 3
-      *window-border-style* :tight
-      ;; *default-group-name* "Base"  ;; ignored
-      *input-window-gravity* :center
-      *message-window-input-gravity* :center
-      *message-window-gravity* :center
-      *mouse-focus-policy* :click
-      *mode-line-timeout* 9.0
-      *timeout-wait* 30
-      *window-format* "%m%n%s%10c"
-      *time-modeline-string* "%a %b %e %H:%M"
-      *screen-mode-line-format* "%h:%g^4>^]%w^>^2%d^]    %T")
 
 ;; (toggle-mode-line (current-screen)
 ;;                   (current-head))
