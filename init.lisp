@@ -299,6 +299,7 @@ run-or-raise with group search t."
      ("KeePassXC" "keepassxc"))
     ("Screen"
      ("Next Background" "fbrdbg")
+     ("Restart conky" "pkill -x conky; conky -d")
      ("Blank Screen" "xset s activate")
      ("Standby On" "xset +dpms s on")
      ("Standby Off" "xset +dpms s off")
@@ -385,9 +386,9 @@ run-or-raise with group search t."
 
 ;;; Programs
 (run-shell-command "type emacs && emacs --daemon")
-(run-shell-command "type conky && conky -d")
 (run-shell-command "type xscreensaver && xscreensaver -no-splash")
 (run-shell-command "type setup && setup monitor left" t)
+(run-shell-command "type conky && conky -d")
 (run-shell-command "type compton && compton")
 (toggle-mode-line (current-screen)
                   (current-head))
