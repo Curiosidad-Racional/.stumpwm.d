@@ -110,6 +110,8 @@ run-or-raise with group search t."
   (run-or-raise-prefer-group "mysql-workbench" "Mysql-workbench"))
 (defcommand wireshark () ()
   (run-or-raise-prefer-group "wireshark" "Wireshark"))
+(defcommand nautilus () ()
+  (run-or-raise-prefer-group "nautilus" "Nautilus"))
 
 ;; frames
 (defcommand resize-width (width-inc)
@@ -201,7 +203,7 @@ run-or-raise with group search t."
 (define-key *top-map* (kbd "s-C") "gnew")
 (define-key *top-map* (kbd "s-K") "gkill")
 
-(define-key *top-map* (kbd "s-r") "refresh-heads")
+(define-key *root-map* (kbd "s-r") "refresh-heads")
 
 (define-key *root-map* (kbd "C-SPC") nil)
 (define-key *root-map* (kbd "C-a") nil)
@@ -213,7 +215,7 @@ run-or-raise with group search t."
 (define-key *root-map* (kbd "C-m") nil)
 (define-key *root-map* (kbd "C-n") nil)
 (define-key *root-map* (kbd "C-p") nil)
-(define-key *root-map* (kbd "e") nil)
+(define-key *root-map* (kbd "e") "expose")
 (define-key *root-map* (kbd "c") nil)
 
 (dotimes (i 10)
@@ -251,6 +253,8 @@ run-or-raise with group search t."
     (define-key m (kbd "Q") "exec workbench")
     (define-key m (kbd "w") "wireshark")
     (define-key m (kbd "W") "exec wireshark")
+    (define-key m (kbd "n") "nautilus")
+    (define-key m (kbd "N") "exec nautilus")
     m))
 (define-key *top-map* (kbd "s-q") *app-map*)
 
@@ -303,6 +307,8 @@ run-or-raise with group search t."
      ("Blank Screen" "xset s activate")
      ("Standby On" "xset +dpms s on")
      ("Standby Off" "xset +dpms s off")
+     ("Transparency On" "compton")
+     ("Transparency Off" "pkill -x compton")
      ("Configuration" "arandr")
      ("Detect Left" "setup monitor left -w -k")
      ("Detect Right" "setup monitor right -w -k")
