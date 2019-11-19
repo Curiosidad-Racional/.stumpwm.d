@@ -1,6 +1,7 @@
 (in-package #:stumpwm)
 
-(export '(*transparency-p*
+(export '(*app-menu*
+          *transparency-p*
           *transparency-focus*
           *transparency-focus-default*
           *transparency-unfocus*
@@ -102,6 +103,8 @@ run-or-raise with group search t."
   (run-or-raise-prefer-group "emacsclient -c -n" "Emacs"))
 (defcommand firefox () ()
   (run-or-raise-prefer-group "firefox" "Firefox"))
+(defcommand chromium-browser () ()
+  (run-or-raise-prefer-group "chromium-browser" "Chromium-browser"))
 (defcommand google-chrome () ()
   (run-or-raise-prefer-group "google-chrome" "Google-chrome"))
 (defcommand xterm () ()
@@ -112,6 +115,10 @@ run-or-raise with group search t."
   (run-or-raise-prefer-group "wireshark" "Wireshark"))
 (defcommand nautilus () ()
   (run-or-raise-prefer-group "nautilus" "Nautilus"))
+(defcommand top () ()
+  (run-or-raise-prefer-group "tilda -c 'gotop -pbc solarized'" "Tilda"))
+(defcommand pull-top () ()
+  (run-shell-command "pkill -x tilda"))
 
 ;; frames
 (defcommand resize-width (width-inc)
@@ -140,22 +147,9 @@ run-or-raise with group search t."
 (defcommand hide () ()
   (hide-window (current-window)))
 
-(defcommand menu () ()
-  (labels ((pick (options)
-                 (let ((selection (stumpwm::select-from-menu (current-screen) options "")))
-                   (cond
-                    ((null selection)
-                     (throw 'error "Abort."))
-                    ((stringp (second selection))
-                     (second selection))
-                    (t
-                     (pick (cdr selection)))))))
-    (let ((choice (pick *app-menu*)))
-      (run-shell-command choice))))
-
 ;;; Keys
 ;; (load (merge-pathnames "bindings.lisp" *load-truename*))
-(define-key *top-map* (kbd "s-l") "xscreensaver-command -lock")
+(define-key *top-map* (kbd "s-ESC") "xscreensaver-command -lock")
 (define-key *top-map* (kbd "s-x") "colon")
 (define-key *top-map* (kbd "s-:") "eval")
 (define-key *top-map* (kbd "s-!") "exec")
@@ -166,8 +160,8 @@ run-or-raise with group search t."
 (define-key *top-map* (kbd "s-p") "prev-in-frame")
 (define-key *top-map* (kbd "s-P") "prev") ;; group
 (define-key *top-map* (kbd "s-o") "fother")
-(define-key *top-map* (kbd "s-Tab") "fnext")
-(define-key *top-map* (kbd "s-ISO_Left_Tab") "fprev")
+(define-key *top-map* (kbd "s-Tab") "gnext")
+(define-key *top-map* (kbd "s-ISO_Left_Tab") "gprev")
 (define-key *top-map* (kbd "s-r") "iresize")
 (define-key *top-map* (kbd "s-R") "remove")
 (define-key *top-map* (kbd "s-v") "vsplit")
@@ -181,7 +175,7 @@ run-or-raise with group search t."
 (define-key *top-map* (kbd "s--") "only")
 (define-key *top-map* (kbd "s-w") "windowlist")
 (define-key *top-map* (kbd "s-z") "hide")
-(define-key *top-map* (kbd "Menu") "menu")
+(define-key *top-map* (kbd "Menu") "show-menu")
 
 (define-key *top-map* (kbd "s-Up") "move-focus up")
 (define-key *top-map* (kbd "s-Down") "move-focus down")
@@ -195,28 +189,42 @@ run-or-raise with group search t."
 (define-key *top-map* (kbd "C-s-Down") "resize 0 -10")
 (define-key *top-map* (kbd "C-s-Left") "resize -10 0")
 (define-key *top-map* (kbd "C-s-Right") "resize 10 0")
+(define-key *top-map* (kbd "s-i") "move-focus up")
+(define-key *top-map* (kbd "s-k") "move-focus down")
+(define-key *top-map* (kbd "s-j") "move-focus left")
+(define-key *top-map* (kbd "s-l") "move-focus right")
+(define-key *top-map* (kbd "s-I") "move-window up")
+(define-key *top-map* (kbd "s-K") "move-window down")
+(define-key *top-map* (kbd "s-J") "move-window left")
+(define-key *top-map* (kbd "s-L") "move-window right")
+(define-key *top-map* (kbd "C-s-i") "resize 0 10")
+(define-key *top-map* (kbd "C-s-k") "resize 0 -10")
+(define-key *top-map* (kbd "C-s-j") "resize -10 0")
+(define-key *top-map* (kbd "C-s-l") "resize 10 0")
 
 (define-key *top-map* (kbd "s-W") "resize-width")
 (define-key *top-map* (kbd "s-H") "resize-height")
 
 (define-key *top-map* (kbd "s-m") "mark")
 (define-key *top-map* (kbd "s-C") "gnew")
-(define-key *top-map* (kbd "s-K") "gkill")
 
 (define-key *root-map* (kbd "s-r") "refresh-heads")
+(define-key *root-map* (kbd "w") "pull-from-windowlist")
 
 (define-key *root-map* (kbd "C-SPC") nil)
 (define-key *root-map* (kbd "C-a") nil)
 (define-key *root-map* (kbd "C-b") nil)
 (define-key *root-map* (kbd "C-c") nil)
 (define-key *root-map* (kbd "C-e") nil)
-(define-key *root-map* (kbd "C-w") nil)
 (define-key *root-map* (kbd "C-k") nil)
 (define-key *root-map* (kbd "C-m") nil)
 (define-key *root-map* (kbd "C-n") nil)
 (define-key *root-map* (kbd "C-p") nil)
 (define-key *root-map* (kbd "e") "expose")
 (define-key *root-map* (kbd "c") nil)
+
+(define-key *group-root-map* (kbd "C-w") nil)
+(define-key *group-root-map* (kbd "w") nil)
 
 (dotimes (i 10)
   (define-key *group-root-map* (kbd (write-to-string i)) nil)
@@ -245,8 +253,10 @@ run-or-raise with group search t."
     (define-key m (kbd "E") "exec emacsclient -c -n")
     (define-key m (kbd "f") "firefox")
     (define-key m (kbd "F") "exec firefox")
-    (define-key m (kbd "c") "google-chrome")
-    (define-key m (kbd "C") "exec google-chrome")
+    (define-key m (kbd "g") "google-chrome")
+    (define-key m (kbd "G") "exec google-chrome")
+    (define-key m (kbd "c") "chromium-browser")
+    (define-key m (kbd "C") "exec chromium-browser")
     (define-key m (kbd "t") "xterm")
     (define-key m (kbd "T") "exec xterm")
     (define-key m (kbd "q") "workbench")
@@ -255,6 +265,8 @@ run-or-raise with group search t."
     (define-key m (kbd "W") "exec wireshark")
     (define-key m (kbd "n") "nautilus")
     (define-key m (kbd "N") "exec nautilus")
+    (define-key m (kbd "m") "top")
+    (define-key m (kbd "M") "pull-top")
     m))
 (define-key *top-map* (kbd "s-q") *app-map*)
 
@@ -264,7 +276,7 @@ run-or-raise with group search t."
 ;;           (string-equal "Firefox" (window-class win)))
 ;;        ("C-k"   . ("C-S-End" "C-x")))))
 (define-remapped-keys
-    '(("(Firefox|[Cc]hrome)"
+    '(("(Firefox|[Cc]hrom[ei])"
        ("C-n"   . "Down")
        ("C-p"   . "Up")
        ("C-f"   . "Right")
@@ -287,34 +299,37 @@ run-or-raise with group search t."
 ;;; Menu
 (defparameter *app-menu*
   '(("Aplications"
-     ("Google Chrome" "google-chrome")
-     ("Mozilla Firefox" "firefox")
-     ("Emacs Client" "emacsclient -c -n")
-     ("XTerm" "xterm")
-     ("File Manager" "nautilus")
-     ("MySQL Workbench" "mysql-workbench")
-     ("NetworkManager" "nm-applet")
-     ("System Monitor" "gnome-system-monitor")
-     ("Audacity" "audacity")
+     ("Chromium Browser"          "chromium-browser")
+     ("Google Chrome"             "google-chrome")
+     ("Mozilla Firefox"           "firefox")
+     ("Emacs Client"              "emacsclient -c -n")
+     ("XTerm"                     "xterm")
+     ("File Manager"              "nautilus")
+     ("MySQL Workbench"           "mysql-workbench")
+     ("NetworkManager"            "nm-applet")
+     ("System Monitor"            "gnome-system-monitor")
+     ("Audacity"                  "audacity")
      ("PulseAudio Volume Control" "pavucontrol")
-     ("Gimp" "gimp")
-     ("Simple Scan" "simple-scan")
-     ("Boot usb creator" "usb-creator-gtk")
-     ("KeePassXC" "keepassxc"))
+     ("Gimp"                      "gimp")
+     ("Simple Scan"               "simple-scan")
+     ("Boot usb creator"          "usb-creator-gtk")
+     ("KeePassXC"                 "keepassxc"))
     ("Screen"
-     ("Next Background" "fbrdbg")
-     ("Restart conky" "pkill -x conky; conky -d")
-     ("Blank Screen" "xset s activate")
-     ("Standby On" "xset +dpms s on")
-     ("Standby Off" "xset +dpms s off")
-     ("Transparency On" "compton")
-     ("Transparency Off" "pkill -x compton")
-     ("Configuration" "arandr")
-     ("Detect Left" "setup monitor left -w -k")
-     ("Detect Right" "setup monitor right -w -k")
-     ("Enable screensaver" "/usr/bin/xscreensaver -no-splash")
-     ("Disable screensaver" "/usr/bin/xscreensaver-command -exit")
-     ("Lock screen" "/usr/bin/xscreensaver-command -lock")
+     ("Restart conky"         "pkill -x conky; conky -d")
+     ("Blank Screen"          "xset s activate")
+     ("Standby On"            "xset +dpms s on")
+     ("Standby Off"           "xset +dpms s off")
+     ("Set transparency"      "transparency-window")
+     ("Enable transparency"   "compton")
+     ("Disable transparency"  "pkill -x compton"))
+    ("Monitors"
+     ("Configuration"         "arandr")
+     ("Detect Left"           "setup monitor left -w -k")
+     ("Detect Right"          "setup monitor right -w -k"))
+    ("Screensaver"
+     ("Enable screensaver"    "/usr/bin/xscreensaver -no-splash")
+     ("Disable screensaver"   "/usr/bin/xscreensaver-command -exit")
+     ("Lock screen"           "/usr/bin/xscreensaver-command -lock")
      ("Configure screensaver" "/usr/bin/xscreensaver-command -prefs"))))
 
 ;;; Options
@@ -324,10 +339,12 @@ run-or-raise with group search t."
 (defparameter *transparency-focus* '(("Google-chrome" . 0.9)
                                      ("Firefox" . 0.9)
                                      ("Mysql-workbench-bin" . 0.9)
+                                     ("Tilda" . 1.0)
                                      ("Totem" . 1.0)))
 (defparameter *transparency-unfocus* '(("Google-chrome" . 0.8)
                                        ("Firefox" . 0.8)
                                        ("Mysql-workbench-bin" . 0.8)
+                                       ("Tilda" . 1.0)
                                        ("Totem" . 1.0)))
 (set-focus-color "cyan")
 
@@ -342,6 +359,9 @@ run-or-raise with group search t."
 
 ;;; Modules
 (set-module-dir "~/.stumpwm.d/modules")
+;; [ Menu
+(load-module "app-menu")
+;; ]
 ;; https://www.oreilly.com/library/view/x-window-system/9780937175149/Chapter05.html
 ;; (set-font "-misc-fixed-medium-r-normal--10-100-75-75-c-60-iso8859-1") ;; 6x10 small
 ;; (set-font "-misc-fixed-medium-r-normal--13-120-75-75-c-70-iso8859-1") ;; 7x13
@@ -394,8 +414,8 @@ run-or-raise with group search t."
 (run-shell-command "type emacs && emacs --daemon")
 (run-shell-command "type xscreensaver && xscreensaver -no-splash")
 (run-shell-command "type setup && setup monitor left" t)
-(run-shell-command "type conky && conky -d")
 (run-shell-command "type compton && compton")
+(run-shell-command "type tilda && type gotop && tilda -c 'gotop -pbc solarized'")
 (toggle-mode-line (current-screen)
                   (current-head))
 (refresh-heads)
