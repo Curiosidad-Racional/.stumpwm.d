@@ -11,7 +11,7 @@
       *transient-border-width* 3
       *normal-border-width* 3
       *window-border-style* :tight
-      *default-group-name* "Def"  ;; ignored
+      ;; *default-group-name* "Def"  ;; ignored
       *input-window-gravity* :center
       *message-window-input-gravity* :center
       *message-window-gravity* :center
@@ -21,7 +21,7 @@
       *window-format* "%m%n%s%10c"
       *time-modeline-string* "%a %b %e %H:%M"
       *screen-mode-line-format* "%h:%g^4>^]%w^>^2%d^]    %T")
-;;(restart-soft)
+;; (restart-soft)  ;; bug
 
 (set-prefix-key (kbd "s-SPC"))
 ;;; Functions
@@ -386,10 +386,9 @@ run-or-raise with group search t."
 ;; * (ql:quickload "xembed")
 (load-module "stumptray")
 ;; ]
-;; [ Background
+;; [ Wallpapers
 ;; require `feh`
 (load-module "wallpapers")
-(wallpapers::multiple-wallpapers 0 (* 5 60))
 ;; ]
 ;; [ Global windows
 (load-module "globalwindows")
@@ -420,6 +419,9 @@ run-or-raise with group search t."
 (toggle-mode-line (current-screen)
                   (current-head))
 (refresh-heads)
+;; [ Wallpapers
+(wallpapers::multiple-wallpapers 0 (* 5 60))
+;; ]
 ;; [ Stumpwm Tray
 (stumptray::stumptray)
 ;; ]
