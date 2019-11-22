@@ -211,6 +211,7 @@ run-or-raise with group search t."
 (define-key *root-map* (kbd "s-r") "refresh-heads")
 (define-key *root-map* (kbd "w") "pull-from-windowlist")
 
+(define-key *root-map* (kbd "ESC") "abort")
 (define-key *root-map* (kbd "C-SPC") nil)
 (define-key *root-map* (kbd "C-a") nil)
 (define-key *root-map* (kbd "C-b") nil)
