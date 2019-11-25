@@ -147,7 +147,238 @@ run-or-raise with group search t."
 (defcommand hide () ()
   (hide-window (current-window)))
 
+;; Mouse keyboard
+(setf *rat-widths* nil
+      *rat-heights* nil)
+
+(defun draw-regions (screen)
+  "Draw the number of each frame in its corner. Return the list of
+windows used to draw the numbers in. The caller must destroy them."
+  (let ((w (screen-width screen))
+        (h (screen-height screen))
+        (x0 0) (y0 0))
+    (dolist (d (reverse *rat-widths*))
+      (setf w (round w 5)
+            x0 (+ x0 (* d w))))
+    (setf w (round w 5))
+    (dolist (d (reverse *rat-heights*))
+      (setf h (round h 3)
+            y0 (+ y0 (* d h))))
+    (setf h (round h 3))
+    (mapcar (lambda (x y l)
+              (let ((win (xlib:create-window
+                          :parent (screen-root screen)
+                          :x (+ x0 (* x w)) :y (+ y0 (* y h)) :width 1 :height 1
+                          :background (screen-fg-color screen)
+                          :border (screen-border-color screen)
+                          :border-width 1
+                          :event-mask '())))
+                (xlib:map-window win)
+                (setf (xlib:window-priority win) :above)
+                (echo-in-window win (screen-font screen)
+                                (screen-fg-color screen)
+                                (screen-bg-color screen)
+                                l)
+                (xlib:display-finish-output *display*)
+                (dformat 3 "mapped ~S~%" l)
+                win))
+            '(0 1 2 3 4
+                0 1 2 3 4
+                0 1 2 3 4)
+            '(0 0 0 0 0
+                1 1 1 1 1
+                2 2 2 2 2)
+            '("q" "w" "e" "r" "t"
+              "a" "s" "d" "f" "g"
+              "z" "x" "c" "v" "b"))))
+
+(defcommand rat-choose-region () ()
+  "show a number in the corner of each frame and wait for the user to
+select one. Returns the selected frame or nil if aborted."
+  (let* ((continue t)
+         (group (current-group))
+         (screen (group-screen group)))
+    (loop while continue
+          do (let ((wins (draw-regions screen)))
+               (multiple-value-bind (has-click ch x y)
+                   (read-one-char-or-click group)
+                 (mapc #'xlib:destroy-window wins)
+                 (if has-click
+                     (setf continue nil)
+                   (if ch
+                       (if (char= ch #\-)
+                           (progn
+                             (pop *rat-widths*)
+                             (pop *rat-heights*))
+                         (let ((pos (cdr (assoc (char-downcase ch)
+                                                '((#\q 0 . 0)
+                                                  (#\w 1 . 0)
+                                                  (#\e 2 . 0)
+                                                  (#\r 3 . 0)
+                                                  (#\t 4 . 0)
+                                                  (#\a 0 . 1)
+                                                  (#\s 1 . 1)
+                                                  (#\d 2 . 1)
+                                                  (#\f 3 . 1)
+                                                  (#\g 4 . 1)
+                                                  (#\z 0 . 2)
+                                                  (#\x 1 . 2)
+                                                  (#\c 2 . 2)
+                                                  (#\v 3 . 2)
+                                                  (#\b 4 . 2)) :test 'char=))))
+                           (when pos
+                             (push (car pos) *rat-widths*)
+                             (push (cdr pos) *rat-heights*)
+                             (if (char= (char-upcase ch) ch)
+                                 (setf continue nil)))))
+                     (setf continue nil))))))
+    (let ((w (screen-width screen))
+          (h (screen-height screen))
+          (x0 0) (y0 0))
+      (dolist (d (reverse *rat-widths*))
+        (setf w (round w 5)
+              x0 (+ x0 (* d w))))
+      (dolist (d (reverse *rat-heights*))
+        (setf h (round h 3)
+              y0 (+ y0 (* d h))))
+      (warp-pointer screen x0 y0))))
+
+(defcommand rat-mode-double () ()
+  (setf *rat-mode-delta* (* 2 *rat-mode-delta*)))
+
+(defcommand rat-mode-half () ()
+  (setf *rat-mode-delta* (/ *rat-mode-delta* 2)))
+
+(defcommand rat-mode-pop-fracs () ()
+  (pop *rat-mode-width-fracs*)
+  (pop *rat-mode-height-fracs*))
+
+(defcommand rat-mode-frac (width-frac height-frac)
+  ((:number "Enter width fraction: ")
+   (:number "Enter height fraction: "))
+  (push width-frac *rat-mode-width-fracs*)
+  (push height-frac *rat-mode-height-fracs*)
+  (let* ((cur (current-screen))
+         (w (screen-width cur))
+         (h (screen-height cur)))
+    (dolist (frac *rat-mode-width-fracs*)
+      (setf w (round (* frac w) 6)))
+    (dolist (frac *rat-mode-height-fracs*)
+      (setf h (round (* frac h) 4)))
+    (warp-pointer cur w h)))
+
+(defcommand rat-mode-left (arg)
+  ((:number "Times: "))
+  (warp-pointer-relative (* arg (- *rat-mode-delta*)) 0))
+
+(defcommand rat-mode-right (arg)
+  ((:number "Times: "))
+  (warp-pointer-relative (* arg *rat-mode-delta*) 0))
+
+(defcommand rat-mode-up (arg)
+  ((:number "Times: "))
+  (warp-pointer-relative 0 (* arg (- *rat-mode-delta*))))
+
+(defcommand rat-mode-down (arg)
+  ((:number "Times: "))
+  (warp-pointer-relative 0 (* arg *rat-mode-delta*)))
+
+(defcommand rat-mode-left-up (arg)
+  ((:number "Times: "))
+  (warp-pointer-relative (* arg (- *rat-mode-delta*)) (* arg (- *rat-mode-delta*))))
+
+(defcommand rat-mode-right-down (arg)
+  ((:number "Times: "))
+  (warp-pointer-relative (* arg *rat-mode-delta*) (* arg *rat-mode-delta*)))
+
+(defcommand rat-mode-right-up (arg)
+  ((:number "Times: "))
+  (warp-pointer-relative (* arg *rat-mode-delta*) (* arg (- *rat-mode-delta*))))
+
+(defcommand rat-mode-left-down (arg)
+  ((:number "Times: "))
+  (warp-pointer-relative (* arg (- *rat-mode-delta*)) (* arg *rat-mode-delta*)))
+
+(defun rat-mode-enter ()
+  (setf *rat-mode-delta* 16
+        *rat-mode-width-fracs* nil
+        *rat-mode-height-fracs* nil
+        *rat-mode-line-background-color* *mode-line-background-color*
+        *mode-line-background-color* "red")
+  (toggle-mode-line *primary-screen* *primary-head*)
+  (toggle-mode-line *primary-screen* *primary-head*))
+
+(defun rat-mode-exit ()
+  (setf *mode-line-background-color* *rat-mode-line-background-color*)
+  (toggle-mode-line *primary-screen* *primary-head*)
+  (toggle-mode-line *primary-screen* *primary-head*))
+
+(define-interactive-keymap rat-mode
+  (:on-enter #'rat-mode-enter
+             :on-exit #'rat-mode-exit)
+  ((kbd "q") "rat-mode-frac 1 1")
+  ((kbd "w") "rat-mode-frac 2 1")
+  ((kbd "e") "rat-mode-frac 3 1")
+  ((kbd "r") "rat-mode-frac 4 1")
+  ((kbd "t") "rat-mode-frac 5 1")
+
+  ((kbd "a") "rat-mode-frac 1 2")
+  ((kbd "s") "rat-mode-frac 2 2")
+  ((kbd "d") "rat-mode-frac 3 2")
+  ((kbd "f") "rat-mode-frac 4 2")
+  ((kbd "g") "rat-mode-frac 5 2")
+
+  ((kbd "z") "rat-mode-frac 1 3")
+  ((kbd "x") "rat-mode-frac 2 3")
+  ((kbd "c") "rat-mode-frac 3 3")
+  ((kbd "v") "rat-mode-frac 4 3")
+  ((kbd "b") "rat-mode-frac 5 3")
+
+  ((kbd "ntilde") "rat-mode-half")
+  ((kbd "p") "rat-mode-double")
+  ((kbd "-") "rat-mode-pop-fracs")
+  ((kbd "k") "rat-mode-enter")
+
+  ((kbd "j") "rat-mode-left 2")
+  ((kbd ",") "rat-mode-down 2")
+  ((kbd "l") "rat-mode-right 2")
+  ((kbd "i") "rat-mode-up 2")
+
+  ((kbd "u") "rat-mode-left-up 2")
+  ((kbd "m") "rat-mode-left-down 2")
+  ((kbd "o") "rat-mode-right-up 2")
+  ((kbd ".") "rat-mode-right-down 2")
+
+  ((kbd "J") "rat-mode-left 4")
+  ((kbd ";") "rat-mode-down 4")
+  ((kbd "L") "rat-mode-right 4")
+  ((kbd "I") "rat-mode-up 4")
+
+  ((kbd "U") "rat-mode-left-up 4")
+  ((kbd "M") "rat-mode-left-down 4")
+  ((kbd "O") "rat-mode-right-up 4")
+  ((kbd ":") "rat-mode-right-down 4")
+
+  ((kbd "C-j") "rat-mode-left 1")
+  ((kbd "C-,") "rat-mode-down 1")
+  ((kbd "C-l") "rat-mode-right 1")
+  ((kbd "C-i") "rat-mode-up 1")
+
+  ((kbd "C-u") "rat-mode-left-up 1")
+  ((kbd "C-m") "rat-mode-left-down 1")
+  ((kbd "C-o") "rat-mode-right-up 1")
+  ((kbd "C-.") "rat-mode-right-down 1")
+
+  ((kbd "n") "ratclick 1 1")
+  ((kbd "h") "ratclick 2 1")
+  ((kbd "y") "ratclick 3 1")
+  ((kbd "N") "ratclick 1")
+  ((kbd "H") "ratclick 2")
+  ((kbd "Y") "ratclick 3"))
+
 ;;; Keys
+(define-key *top-map* (kbd "s-,") "rat-choose-region")
+(define-key *top-map* (kbd "s-.") "rat-mode")
 ;; (load (merge-pathnames "bindings.lisp" *load-truename*))
 (define-key *top-map* (kbd "s-ESC") "xscreensaver-command -lock")
 (define-key *top-map* (kbd "s-x") "colon")
@@ -416,8 +647,10 @@ run-or-raise with group search t."
 (run-shell-command "type setup && setup monitor left" t)
 (run-shell-command "type compton && compton")
 (run-shell-command "type tilda && type gotop && tilda -c 'gotop -pbc solarized'")
-(toggle-mode-line (current-screen)
-                  (current-head))
+(setf *primary-screen* (current-screen)
+      *primary-head* (current-head))
+(toggle-mode-line *primary-screen*
+                  *primary-head*)
 (refresh-heads)
 ;; [ Wallpapers
 (wallpapers::multiple-wallpapers 0 (* 5 60))
