@@ -1,3 +1,4 @@
+
 (in-package #:stumpwm)
 
 (export '(*app-menu*
@@ -57,6 +58,34 @@ run-or-raise with group search t."
     (if last-window (set-unfocus-window-transparency last-window))))
 (add-hook *focus-window-hook* 'focus-window-transparency)
 
+(defun refresh-mode-line (screen head
+                          &optional (format '*screen-mode-line-format*))
+  (let ((ml (head-mode-line head)))
+    (if ml
+        (progn
+          ;; Destroy keeping head
+          (xlib:destroy-window (mode-line-window ml))
+          (xlib:free-gcontext (mode-line-gc ml))
+          (setf *mode-lines* (remove ml *mode-lines*))
+          (maybe-cancel-mode-line-timer)
+          ;; Make keeping head
+          (let* ((window (make-mode-line-window screen))
+                 (gc (make-mode-line-gc window screen))
+                 (cc (make-mode-line-cc window screen gc))
+                 (mode-line (%make-mode-line :window window
+                                             :screen screen
+                                             :head head
+                                             :format format
+                                             :position *mode-line-position*
+                                             :cc cc)))
+            (prog1 mode-line
+              (push mode-line *mode-lines*)
+              (update-mode-line-color-context mode-line)
+              (resize-mode-line mode-line)
+              (xlib:map-window window)
+              (redraw-mode-line mode-line)
+              (turn-on-mode-line-timer)))))))
+
 ;;; Commands
 ;; Monitors
 (defcommand monitor-left () ()
@@ -79,6 +108,7 @@ run-or-raise with group search t."
 
 (defcommand transparency-enable () ()
   (setf *transparency-p* t)
+  (run-shell-command "compton")
   (let ((cur-win (current-window)))
     (dolist (group (sort-groups (current-screen)))
       (dolist (window (group-windows group))
@@ -89,6 +119,7 @@ run-or-raise with group search t."
 
 (defcommand transparency-disable () ()
   (setf *transparency-p* nil)
+  (run-shell-command "pkill -x compton")
   (dolist (group (sort-groups (current-screen)))
     (dolist (window (group-windows group))
       (set-window-transparency window 1))))
@@ -339,13 +370,11 @@ select one. Returns the selected frame or nil if aborted."
         *rat-mode-height-fracs* nil
         *rat-mode-line-background-color* *mode-line-background-color*
         *mode-line-background-color* "red")
-  (toggle-mode-line *primary-screen* *primary-head*)
-  (toggle-mode-line *primary-screen* *primary-head*))
+  (refresh-mode-line *primary-screen* *primary-head*))
 
 (defun rat-mode-exit ()
   (setf *mode-line-background-color* *rat-mode-line-background-color*)
-  (toggle-mode-line *primary-screen* *primary-head*)
-  (toggle-mode-line *primary-screen* *primary-head*))
+  (refresh-mode-line *primary-screen* *primary-head*))
 
 (define-interactive-keymap rat-mode
   (:on-enter #'rat-mode-enter
@@ -395,13 +424,18 @@ select one. Returns the selected frame or nil if aborted."
 
 ;; Layouts
 (define-interactive-keymap layout-mode ()
-  ((kbd "k") "resize 0 10")
-  ((kbd "j") "resize 0 -10")
-  ((kbd "h") "resize -10 0")
-  ((kbd "l") "resize 10 0")
+  ((kbd "k") "move-focus up")
+  ((kbd "j") "move-focus down")
+  ((kbd "h") "move-focus left")
+  ((kbd "l") "move-focus right")
 
-  ((kbd "V") "vsplit")
-  ((kbd "H") "hsplit")
+  ((kbd "K") "resize 0 10")
+  ((kbd "J") "resize 0 -10")
+  ((kbd "H") "resize -10 0")
+  ((kbd "L") "resize 10 0")
+
+  ((kbd "=") "vsplit")
+  ((kbd "\"") "hsplit")
   ((kbd "R") "remove")
 
   ((kbd "M-w") "resize-width")
@@ -431,6 +465,8 @@ select one. Returns the selected frame or nil if aborted."
 (define-key *top-map* (kbd "s-R") "remove")
 (define-key *top-map* (kbd "s-s") "fselect")
 
+(define-key *top-map* (kbd "s-\"") "hsplit")
+(define-key *top-map* (kbd "s-=") "vsplit")
 (define-key *top-map* (kbd "s-f") "fullscreen-gaps")
 (define-key *top-map* (kbd "s-F") "fullscreen")
 (define-key *top-map* (kbd "s-+") "balance-frames")
