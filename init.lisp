@@ -1,4 +1,3 @@
-
 (in-package #:stumpwm)
 
 (export '(*app-menu*
@@ -537,6 +536,12 @@ select one. Returns the selected frame or nil if aborted."
 
 (define-key *group-root-map* (kbd "C-w") nil)
 (define-key *group-root-map* (kbd "w") nil)
+
+(define-key *groups-map* (kbd "C-n") nil)
+(define-key *groups-map* (kbd "SPC") nil)
+(define-key *groups-map* (kbd "C-SPC") nil)
+(define-key *groups-map* (kbd "C-p") nil)
+(define-key *groups-map* (kbd "A") nil)
 
 (dotimes (i 10)
   (define-key *group-root-map* (kbd (write-to-string i)) nil)
