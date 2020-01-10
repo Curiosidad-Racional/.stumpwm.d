@@ -181,6 +181,11 @@ run-or-raise with group search t."
 (setf *rat-mode-delta* 16
       *rat-widths* nil
       *rat-heights* nil)
+(defcommand xdotool-click (&optional (button 1))
+  (:number)
+  (run-prog *shell-program*
+            :args (list "-c" (concatenate 'string "xdotool click " (write-to-string button)))
+            :wait nil))
 
 (defun draw-regions (screen)
   "Draw the number of each frame in its corner. Return the list of
@@ -291,15 +296,16 @@ select one. Returns the selected frame or nil if aborted."
                     (if mov
                         (rat-mode-move (car mov) (cdr mov)))
                     mov))
-                 ((let ((click (cdr (assoc ch
+                 ((let ((button (cdr (assoc ch
                                          '((#\m . 1)
                                            (#\, . 2)
                                            (#\. . 3)
                                            (#\p . 4)
                                            (#\LATIN_SMALL_LETTER_N_WITH_TILDE . 5))))))
-                    (if click
-                        (send-fake-click (current-window) click))
-                    click))
+                    (if button
+                        ;; (send-fake-click (current-window) button) ;; not working
+                        (xdotool-click button))
+                    button))
                  ((let ((pos (cdr (assoc (char-downcase ch)
                                          '((#\q 0 . 0)
                                            (#\w 1 . 0)
@@ -330,7 +336,8 @@ select one. Returns the selected frame or nil if aborted."
                       (message "Unknown key: ~a" ch)))))))
       (mapc #'xlib:destroy-window wins))
     (when (and (< 0 button) (current-window))
-      (send-fake-click (current-window) button))))
+      ;; (send-fake-click (current-window) button) ;; not working
+      (xdotool-click button))))
 
 (defcommand rat-mode-double () ()
   (setf *rat-mode-delta* (* 2 *rat-mode-delta*))
@@ -415,11 +422,11 @@ select one. Returns the selected frame or nil if aborted."
   ((kbd "C-k") "rat-mode-move 0 -1")
   ((kbd "C-l") "rat-mode-move 1 0")
 
-  ((kbd "m") "ratclick 1")
-  ((kbd ",") "ratclick 2")
-  ((kbd ".") "ratclick 3")
-  ((kbd "p") "ratclick 4")
-  ((kbd "ntilde") "ratclick 5"))
+  ((kbd "m") "xdotool-click 1")
+  ((kbd ",") "xdotool-click 2")
+  ((kbd ".") "xdotool-click 3")
+  ((kbd "p") "xdotool-click 4")
+  ((kbd "ntilde") "xdotool-click 5"))
 
 ;; Layouts
 (define-interactive-keymap layout-mode ()
@@ -508,11 +515,11 @@ select one. Returns the selected frame or nil if aborted."
 (define-key *top-map* (kbd "M-s--") "rat-mode-half")
 (define-key *top-map* (kbd "M-s-+") "rat-mode-double")
 
-(define-key *top-map* (kbd "M-s-m") "ratclick 1")
-(define-key *top-map* (kbd "M-s-,") "ratclick 2")
-(define-key *top-map* (kbd "M-s-.") "ratclick 3")
-(define-key *top-map* (kbd "M-s-p") "ratclick 4")
-(define-key *top-map* (kbd "M-s-ntilde") "ratclick 5")
+(define-key *top-map* (kbd "M-s-m") "xdotool-click 1")
+(define-key *top-map* (kbd "M-s-,") "xdotool-click 2")
+(define-key *top-map* (kbd "M-s-.") "xdotool-click 3")
+(define-key *top-map* (kbd "M-s-p") "xdotool-click 4")
+(define-key *top-map* (kbd "M-s-ntilde") "xdotool-click 5")
 
 (define-key *top-map* (kbd "s-m") "mark")
 (define-key *top-map* (kbd "s-C") "gnew")
