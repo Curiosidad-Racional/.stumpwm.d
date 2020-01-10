@@ -147,7 +147,7 @@ run-or-raise with group search t."
   (run-or-raise-prefer-group "nautilus" "Nautilus"))
 (defcommand top () ()
   (run-or-raise-prefer-group "tilda -c 'gotop -pbc solarized'" "Tilda"))
-(defcommand pull-top () ()
+(defcommand top-kill () ()
   (run-shell-command "pkill -x tilda"))
 
 ;; frames
@@ -534,6 +534,33 @@ select one. Returns the selected frame or nil if aborted."
 (define-key *root-map* (kbd "c") nil)
 (define-key *root-map* (kbd "m") "mode-line")
 
+(define-key *tile-group-root-map* (kbd "p") nil)
+(define-key *tile-group-root-map* (kbd "n") nil)
+(define-key *tile-group-root-map* (kbd "SPC") nil)
+(define-key *tile-group-root-map* *escape-key* nil)
+(define-key *tile-group-root-map* (kbd "C-p") nil)
+(define-key *tile-group-root-map* (kbd "C-n") nil)
+(define-key *tile-group-root-map* (kbd "C-SPC") nil)
+(define-key *tile-group-root-map* (kbd "C-0") nil)
+(define-key *tile-group-root-map* (kbd "C-1") nil)
+(define-key *tile-group-root-map* (kbd "C-2") nil)
+(define-key *tile-group-root-map* (kbd "C-3") nil)
+(define-key *tile-group-root-map* (kbd "C-4") nil)
+(define-key *tile-group-root-map* (kbd "C-5") nil)
+(define-key *tile-group-root-map* (kbd "C-6") nil)
+(define-key *tile-group-root-map* (kbd "C-7") nil)
+(define-key *tile-group-root-map* (kbd "C-8") nil)
+(define-key *tile-group-root-map* (kbd "C-9") nil)
+(define-key *tile-group-root-map* (kbd "R") nil)
+(define-key *tile-group-root-map* (kbd "r") nil)
+(define-key *tile-group-root-map* (kbd "o") nil)
+(define-key *tile-group-root-map* (kbd "TAB") nil)
+(define-key *tile-group-root-map* (kbd "M-TAB") nil)
+(define-key *tile-group-root-map* (kbd "f") nil)
+(define-key *tile-group-root-map* (kbd "F") nil)
+(define-key *tile-group-root-map* (kbd "-") nil)
+(define-key *tile-group-root-map* (kbd "Q") nil)
+
 (define-key *group-root-map* (kbd "C-w") nil)
 (define-key *group-root-map* (kbd "w") nil)
 
@@ -542,6 +569,7 @@ select one. Returns the selected frame or nil if aborted."
 (define-key *groups-map* (kbd "C-SPC") nil)
 (define-key *groups-map* (kbd "C-p") nil)
 (define-key *groups-map* (kbd "A") nil)
+(define-key *groups-map* (kbd "f") "gmove-and-follow")
 
 (dotimes (i 10)
   (define-key *group-root-map* (kbd (write-to-string i)) nil)
@@ -553,6 +581,25 @@ select one. Returns the selected frame or nil if aborted."
 (dotimes (i 9)
   (define-key *top-map* (kbd (format nil "s-~a" (1+ i))) (format nil "gselect ~a" (1+ i))))
 
+(defparameter *frame-map*
+  (let ((m (make-sparse-keymap)))
+    (define-key m (kbd "R") "remove")
+    (define-key m (kbd "r") "iresize")
+    (define-key m (kbd "n") "pull-hidden-next")
+    (define-key m (kbd "p") "pull-hidden-previous")
+    (define-key m (kbd "G") "global-pull-windowlist")
+    (define-key m (kbd "SPC") "pull-hidden-other")
+    (define-key m (kbd "m") "pull-marked")
+    (define-key m (kbd "o") "fnext")
+    (define-key m (kbd "TAB") "fnext")
+    (define-key m (kbd "M-TAB") "fother")
+    (define-key m (kbd "f") "fselect")
+    (define-key m (kbd "F") "curframe")
+    (define-key m (kbd "-") "fclear")
+    (define-key m (kbd "Q") "only")
+    m))
+(define-key *root-map* (kbd "f") '*frame-map*)
+
 (defparameter *toggle-map*
   (let ((m (make-sparse-keymap)))
     (define-key m (kbd "g") "toggle-gaps")
@@ -562,7 +609,7 @@ select one. Returns the selected frame or nil if aborted."
     (define-key m (kbd "k") "which-key-mode")
     (define-key m (kbd "t") "transparency-toggle")
     m))
-(define-key *top-map* (kbd "s-t") *toggle-map*)
+(define-key *top-map* (kbd "s-t") '*toggle-map*)
 
 (defparameter *app-map*
   (let ((m (make-sparse-keymap)))
@@ -585,14 +632,32 @@ select one. Returns the selected frame or nil if aborted."
     (define-key m (kbd "m") "top")
     (define-key m (kbd "M") "pull-top")
     m))
-(define-key *top-map* (kbd "s-q") *app-map*)
+(define-key *top-map* (kbd "s-q") '*app-map*)
 
 (defparameter *modes-map*
   (let ((m (make-sparse-keymap)))
     (define-key m (kbd "r") "rat-mode")
     (define-key m (kbd "l") "layout-mode")
     m))
-(define-key *top-map* (kbd "s-c") *modes-map*)
+(define-key *top-map* (kbd "s-c") '*modes-map*)
+
+(defparameter *layout-map*
+  (let ((m (make-sparse-keymap)))
+    (define-key m (kbd "K") "resize 0 10")
+    (define-key m (kbd "J") "resize 0 -10")
+    (define-key m (kbd "H") "resize -10 0")
+    (define-key m (kbd "L") "resize 10 0")
+
+    (define-key m (kbd "=") "vsplit")
+    (define-key m (kbd "\"") "hsplit")
+    (define-key m (kbd "R") "remove")
+
+    (define-key m (kbd "M-w") "resize-width")
+    (define-key m (kbd "M-h") "resize-height")
+
+    (define-key m (kbd "3") "layout-3")
+    m))
+(define-key *top-map* (kbd "s-A") '*layout-map*)
 
 ;;; Remaps
 ;; (define-remapped-keys
@@ -732,13 +797,16 @@ select one. Returns the selected frame or nil if aborted."
   (fullscreen))
 ;; ]
 
+;; Window rules
+(define-frame-preference *default-group-name*
+  (0 nil t :class "Tilda"))
+
+(define-frame-preference "Int"
+  (2 nil t :create t :class "Mysql-workbench-bin"))
 
 ;;; Programs
-(run-shell-command "type emacs && emacs --daemon")
-(run-shell-command "type xscreensaver && xscreensaver -no-splash")
-(run-shell-command "type setup && setup monitor left" t)
 (run-shell-command "type compton && compton")
-(run-shell-command "type tilda && type gotop && tilda -c 'gotop -pbc solarized'")
+(run-prog *shell-program* :args '("-c" "~/.stumpwm.d/init.sh") :wait t)
 (setf *primary-screen* (current-screen)
       *primary-head* (current-head))
 (toggle-mode-line *primary-screen*
