@@ -20,7 +20,7 @@
       *timeout-wait* 30
       *window-format* "%m%n%s%10c"
       *time-modeline-string* "%a %b %e %H:%M"
-      *screen-mode-line-format* "%h:%g^4>^]%w^>^2%d^]    %T")
+      *screen-mode-line-format* "%h:%g^4>^]%w^>^2%d ^6%B^]    %T")
 ;; (restart-soft)  ;; bug
 
 (set-prefix-key (kbd "s-SPC"))
@@ -35,7 +35,7 @@ run-or-raise with group search t."
 
 (defun set-window-transparency (window opacity)
   (run-shell-command
-   (format nil "type transset && transset --id ~d ~d"
+   (format nil "transset --id ~d ~d"
            (xlib:window-id (window-xwin window))
            opacity)))
 
@@ -85,13 +85,13 @@ run-or-raise with group search t."
               (redraw-mode-line mode-line)
               (turn-on-mode-line-timer)))))))
 
-;;; Commands
+;;;; [ <commands>
 ;; Monitors
 (defcommand monitor-left () ()
-  (run-shell-command "type setup && setup monitor left")
+  (run-prog *shell-program* :args '("-c" "setup monitor left") :wait t)
   (refresh-heads))
-(defcommand monitor-rigth () ()
-  (run-shell-command "type setup && setup monitor right")
+(defcommand monitor-right () ()
+  (run-prog *shell-program* :args '("-c" "setup monitor right") :wait t)
   (refresh-heads))
 ;; Transparency
 (defcommand transparency-window (opacity)
@@ -145,6 +145,8 @@ run-or-raise with group search t."
   (run-or-raise-prefer-group "wireshark" "Wireshark"))
 (defcommand nautilus () ()
   (run-or-raise-prefer-group "nautilus" "Nautilus"))
+(defcommand keepassxc () ()
+  (run-or-raise-prefer-group "keepassxc" "KeePassXC"))
 (defcommand top () ()
   (run-or-raise-prefer-group "tilda -c 'gotop -pbc solarized'" "Tilda"))
 (defcommand top-kill () ()
@@ -163,16 +165,49 @@ run-or-raise with group search t."
   ((:string "Enter argument: "))
   (run-shell-command (concatenate 'string "xscreensaver-command " arg)))
 
-(defcommand layout-3 () ()
-  (let ((g (current-group (current-screen))))
-    (split-frame-in-dir g :row 0.75)
-    (split-frame-in-dir g :column 0.15))
+(defcommand layout-1<1>/1 () ()
+  "Layout row 75% column 15%
++--+ +-------+
+|  | |       |
+|  | |       |
+|  | |       |
++--+ +-------+
++------------+
+|            |
++------------+
+"
+  (let* ((screen (current-screen))
+         (group (current-group screen))
+         (head (current-head)))
+    (if (not (atom (tile-group-frame-head group head)))
+        (only))
+    (split-frame-in-dir group :row 0.75)
+    (split-frame-in-dir group :column 0.15))
   ;; (move-focus-and-or-window :right)
   ;; (let* ((g (current-group (current-screen)))
   ;;        (f (tile-group-current-frame g)))
   ;;   (resize-frame g f (round (* (frame-height f) 1.5)) :height)
   ;;   (resize-frame g f (round (* (frame-width f) 1.7)) :width))
   )
+
+(defcommand layout-2<1> () ()
+  "Layout column 25% row 50%
++--+ +------+
+|  | |      |
+|  | |      |
++--+ |      |
++--+ |      |
+|  | |      |
+|  | |      |
++--+ +------+
+"
+  (let* ((screen (current-screen))
+         (group (current-group screen))
+         (head (current-head)))
+    (if (not (atom (tile-group-frame-head group head)))
+        (only))
+    (split-frame-in-dir group :column 0.25)
+    (split-frame-in-dir group :row 0.50)))
 
 (defcommand hide () ()
   (hide-window (current-window)))
@@ -186,6 +221,40 @@ run-or-raise with group search t."
   (run-prog *shell-program*
             :args (list "-c" (concatenate 'string "xdotool click " (write-to-string button)))
             :wait nil))
+
+;; Groups
+(defcommand repack-group-numbers (&optional (screen (current-screen))) ()
+  (let ((groups (sort-groups screen)))
+   (loop for g in groups
+        do (setf
+            (group-number g)
+            (find-free-number
+             (remove
+              (group-number g)
+              (mapcar 'group-number groups))
+             1)))))
+
+;; https://github.com/stumpwm/stumpwm/wiki/Tips-And-Tricks
+(defun swap-groups (group1 group2)
+      (rotatef (slot-value group1 'number) (slot-value group2 'number)))
+
+(defun move-group-forward (&optional (group (current-group)))
+  (swap-groups group (next-group group (sort-groups (current-screen)))))
+
+(defun move-group-backward (&optional (group (current-group)))
+  (swap-groups group (next-group group (reverse (sort-groups (current-screen))))))
+
+(defcommand gforward () ()
+  (move-group-forward)
+  (echo-groups (current-screen) *group-format*))
+
+(defcommand gbackward () ()
+  (move-group-backward)
+  (echo-groups (current-screen) *group-format*))
+;; Help
+(defcommand top-map-bindings () ()
+  (display-bindings-for-keymaps nil *top-map*))
+;;;; ] <commands>
 
 (defun draw-regions (screen)
   "Draw the number of each frame in its corner. Return the list of
@@ -447,12 +516,13 @@ select one. Returns the selected frame or nil if aborted."
   ((kbd "M-w") "resize-width")
   ((kbd "M-h") "resize-height")
 
-  ((kbd "3") "layout-3"))
+  ((kbd "1") "layout-1<1>/1")
+  ((kbd "2") "layout-2<1>"))
 
 ;;; Keys
 (define-key *top-map* (kbd "s-,") "rat-choose-region")
 (define-key *top-map* (kbd "s-.") "rat-mode")
-(define-key *top-map* (kbd "s-a") "layout-mode")
+(define-key *top-map* (kbd "s-A") "layout-mode")
 ;; (load (merge-pathnames "bindings.lisp" *load-truename*))
 (define-key *top-map* (kbd "s-ESC") "xscreensaver-command -lock")
 (define-key *top-map* (kbd "s-x") "colon")
@@ -470,13 +540,14 @@ select one. Returns the selected frame or nil if aborted."
 (define-key *top-map* (kbd "s-r") "iresize")
 (define-key *top-map* (kbd "s-R") "remove")
 (define-key *top-map* (kbd "s-s") "fselect")
+(define-key *top-map* (kbd "s-T") "float-this")
 
 (define-key *top-map* (kbd "s-\"") "hsplit")
 (define-key *top-map* (kbd "s-=") "vsplit")
-(define-key *top-map* (kbd "s-f") "fullscreen-gaps")
-(define-key *top-map* (kbd "s-F") "fullscreen")
+(define-key *top-map* (kbd "s-F") "toggle-fullscreen-gaps")
+(define-key *top-map* (kbd "s-f") "curframe")
 (define-key *top-map* (kbd "s-+") "balance-frames")
-(define-key *top-map* (kbd "s--") "only")
+(define-key *top-map* (kbd "s-O") "only")
 (define-key *top-map* (kbd "s-w") "windowlist")
 (define-key *top-map* (kbd "s-z") "hide")
 (define-key *top-map* (kbd "s-Z") "fclear")
@@ -523,9 +594,10 @@ select one. Returns the selected frame or nil if aborted."
 
 (define-key *top-map* (kbd "s-m") "mark")
 (define-key *top-map* (kbd "s-C") "gnew")
+(define-key *top-map* (kbd "s-r") "refresh-heads")
 
-(define-key *root-map* (kbd "s-r") "refresh-heads")
 (define-key *root-map* (kbd "w") "pull-from-windowlist")
+(define-key *root-map* (kbd "H") "top-map-bindings")
 
 (define-key *root-map* (kbd "ESC") "abort")
 (define-key *root-map* (kbd "C-SPC") nil)
@@ -542,7 +614,9 @@ select one. Returns the selected frame or nil if aborted."
 (define-key *root-map* (kbd "m") "mode-line")
 
 (define-key *tile-group-root-map* (kbd "p") nil)
+(define-key *tile-group-root-map* (kbd "C-M-p") nil)
 (define-key *tile-group-root-map* (kbd "n") nil)
+(define-key *tile-group-root-map* (kbd "C-M-n") nil)
 (define-key *tile-group-root-map* (kbd "SPC") nil)
 (define-key *tile-group-root-map* *escape-key* nil)
 (define-key *tile-group-root-map* (kbd "C-p") nil)
@@ -558,16 +632,21 @@ select one. Returns the selected frame or nil if aborted."
 (define-key *tile-group-root-map* (kbd "C-7") nil)
 (define-key *tile-group-root-map* (kbd "C-8") nil)
 (define-key *tile-group-root-map* (kbd "C-9") nil)
+(define-key *tile-group-root-map* (kbd "l") nil)
 (define-key *tile-group-root-map* (kbd "R") nil)
+(define-key *tile-group-root-map* (kbd "S") nil)
+(define-key *tile-group-root-map* (kbd "s") nil)
 (define-key *tile-group-root-map* (kbd "r") nil)
 (define-key *tile-group-root-map* (kbd "o") nil)
 (define-key *tile-group-root-map* (kbd "TAB") nil)
 (define-key *tile-group-root-map* (kbd "M-TAB") nil)
 (define-key *tile-group-root-map* (kbd "f") nil)
 (define-key *tile-group-root-map* (kbd "F") nil)
+(define-key *tile-group-root-map* (kbd "+") nil)
 (define-key *tile-group-root-map* (kbd "-") nil)
 (define-key *tile-group-root-map* (kbd "Q") nil)
 
+(define-key *group-root-map* (kbd "F11") nil)
 (define-key *group-root-map* (kbd "C-w") nil)
 (define-key *group-root-map* (kbd "w") nil)
 
@@ -576,7 +655,9 @@ select one. Returns the selected frame or nil if aborted."
 (define-key *groups-map* (kbd "C-SPC") nil)
 (define-key *groups-map* (kbd "C-p") nil)
 (define-key *groups-map* (kbd "A") nil)
-(define-key *groups-map* (kbd "f") "gmove-and-follow")
+(define-key *groups-map* (kbd "F") "gmove-and-follow")
+(define-key *groups-map* (kbd "f") "gforward")
+(define-key *groups-map* (kbd "b") "gbackward")
 
 (dotimes (i 10)
   (define-key *group-root-map* (kbd (write-to-string i)) nil)
@@ -602,8 +683,11 @@ select one. Returns the selected frame or nil if aborted."
     (define-key m (kbd "M-TAB") "fother")
     (define-key m (kbd "f") "fselect")
     (define-key m (kbd "F") "curframe")
+    (define-key m (kbd "+") "balance-frames")
     (define-key m (kbd "-") "fclear")
-    (define-key m (kbd "Q") "only")
+    (define-key m (kbd "\"") "hsplit")
+    (define-key m (kbd "=") "vsplit")
+    (define-key m (kbd "O") "only")
     m))
 (define-key *root-map* (kbd "f") '*frame-map*)
 
@@ -630,14 +714,17 @@ select one. Returns the selected frame or nil if aborted."
     (define-key m (kbd "C") "exec chromium-browser")
     (define-key m (kbd "t") "xterm")
     (define-key m (kbd "T") "exec xterm")
+    (define-key m (kbd "k") "keepassxc")
+    (define-key m (kbd "K") "exec keepassxc")
     (define-key m (kbd "q") "workbench")
     (define-key m (kbd "Q") "exec workbench")
     (define-key m (kbd "w") "wireshark")
     (define-key m (kbd "W") "exec wireshark")
     (define-key m (kbd "n") "nautilus")
     (define-key m (kbd "N") "exec nautilus")
-    (define-key m (kbd "m") "top")
-    (define-key m (kbd "M") "pull-top")
+    (define-key m (kbd "p") "top")
+    (define-key m (kbd "P") "pull-top")
+    (define-key m (kbd "m") "exec nm-applet")
     m))
 (define-key *top-map* (kbd "s-q") '*app-map*)
 
@@ -662,9 +749,11 @@ select one. Returns the selected frame or nil if aborted."
     (define-key m (kbd "M-w") "resize-width")
     (define-key m (kbd "M-h") "resize-height")
 
-    (define-key m (kbd "3") "layout-3")
+    (define-key m (kbd "O") "only")
+    (define-key m (kbd "1") "layout-1<1>/1")
+    (define-key m (kbd "2") "layout-2<1>")
     m))
-(define-key *top-map* (kbd "s-A") '*layout-map*)
+(define-key *top-map* (kbd "s-a") '*layout-map*)
 
 ;;; Remaps
 ;; (define-remapped-keys
@@ -680,11 +769,12 @@ select one. Returns the selected frame or nil if aborted."
        ("C-v"   . "Next")
        ("M-v"   . "Prior")
        ("M-w"   . "C-c")
-       ("C-w"   . "C-x")
+       ;; ("C-w"   . "C-x")
        ("C-y"   . "C-v")
        ("M-<"   . "Home")
        ("M->"   . "End")
        ("C-s"   . "C-f")
+       ("C-S"   . "C-s")
        ("C-M-b" . "M-Left")
        ("C-M-f" . "M-Right")
        ("C-k"   . ("C-S-End" "C-x")))
@@ -711,17 +801,19 @@ select one. Returns the selected frame or nil if aborted."
      ("Boot usb creator"          "usb-creator-gtk")
      ("KeePassXC"                 "keepassxc"))
     ("Screen"
+     ("Next wallpaper"        random-wallpaper)
      ("Restart conky"         "pkill -x conky; conky -d")
-     ("Blank Screen"          "xset s activate")
-     ("Standby On"            "xset +dpms s on")
-     ("Standby Off"           "xset +dpms s off")
-     ("Set transparency"      "transparency-window")
+     ("Blank screen"          "xset s activate")
+     ("Standby on"            "xset +dpms s on")
+     ("Standby off"           "xset -dpms s off")
+     ("Set transparency"      transparency-window)
      ("Enable transparency"   "compton")
      ("Disable transparency"  "pkill -x compton"))
     ("Monitors"
+     ("Refresh"               refresh-heads)
      ("Configuration"         "arandr")
-     ("Detect Left"           "setup monitor left -w -k")
-     ("Detect Right"          "setup monitor right -w -k"))
+     ("Detect Left"           monitor-left)
+     ("Detect Right"          monitor-right))
     ("Screensaver"
      ("Enable screensaver"    "/usr/bin/xscreensaver -no-splash")
      ("Disable screensaver"   "/usr/bin/xscreensaver-command -exit")
@@ -743,6 +835,7 @@ select one. Returns the selected frame or nil if aborted."
                                        ("Tilda" . 1.0)
                                        ("Totem" . 1.0)))
 (set-focus-color "cyan")
+(set-frame-outline-width 0)
 
 ;; (toggle-mode-line (current-screen)
 ;;                   (current-head))
@@ -793,15 +886,28 @@ select one. Returns the selected frame or nil if aborted."
 ;; [ Gaps between windows
 (load-module "swm-gaps")
 ;; Head gaps run along the 4 borders of the monitor(s)
-(setf swm-gaps:*head-gaps-size* 20
+(setf swm-gaps:*head-gaps-size* 0
 ;; Inner gaps run along all the 4 borders of a window
-      swm-gaps:*inner-gaps-size* 5
+      swm-gaps:*inner-gaps-size* 3
 ;; Outer gaps add more padding to the outermost borders of a window (touching
 ;; the screen border)
       swm-gaps:*outer-gaps-size* 0)
-(defcommand fullscreen-gaps () ()
-  (swm-gaps::toggle-gaps)
-  (fullscreen))
+;; toggle fullscreen and gaps
+(defparameter *fullscreen-window* nil)
+(defcommand toggle-fullscreen-gaps () ()
+  (if *fullscreen-window*
+      (progn
+        (deactivate-fullscreen *fullscreen-window*)
+        (if (not swm-gaps:*gaps-on*)
+            (swm-gaps::toggle-gaps))
+        (setf *fullscreen-window* nil)
+        (update-mode-lines (current-screen)))
+    (progn
+      (if swm-gaps:*gaps-on*
+          (swm-gaps::toggle-gaps))
+      (let ((window (current-window)))
+        (activate-fullscreen window)
+        (setf *fullscreen-window* window)))))
 ;; ]
 
 ;; Window rules
@@ -812,7 +918,7 @@ select one. Returns the selected frame or nil if aborted."
   (2 nil t :create t :class "Mysql-workbench-bin"))
 
 ;;; Programs
-(run-shell-command "type compton && compton")
+(run-prog *shell-program* :args '("-c" "type compton && compton") :wait nil)
 (run-prog *shell-program* :args '("-c" "~/.stumpwm.d/init.sh") :wait t)
 (setf *primary-screen* (current-screen)
       *primary-head* (current-head))
@@ -827,4 +933,7 @@ select one. Returns the selected frame or nil if aborted."
 ;; ]
 ;; [ Gaps between windows
 (swm-gaps::toggle-gaps)
+;; ]
+;; [ Battery indicator
+(load-module "battery-portable")
 ;; ]
